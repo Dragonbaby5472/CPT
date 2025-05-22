@@ -34,7 +34,7 @@ import org.jgrapht.graph.DefaultEdge;
  */
 public class CPCGenerator<V> extends TestCaseGenerator<V> {
 	
-	/**
+    /**
      * Constructs a new CPCGenerator for the specified SUT model.
      *
      * @param sut the System Under Test model containing the graph and constraints
