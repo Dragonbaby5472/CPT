@@ -34,7 +34,7 @@ You can run the example SUT with:
 java -jar generator.jar -file msa_example.txt -log result.log -showpath
 ```
 
-## Lincense
+## License
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
