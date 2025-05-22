@@ -21,10 +21,27 @@ import java.util.*;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
 
+/**
+ * Implements the Filter‐based approach to constrained path‐based testing.
+ *
+ * <p>This generator first obtains a set of paths that achieve edge coverage
+ * via {@link #egGenerate()}, then filters out any path that violates
+ * the SUT’s constraints (NEGATIVE, ONCE, MAX_ONCE). Remaining paths are
+ * guaranteed to cover all edges while respecting the defined constraints.</p>
+ *
+ * @param <V> the vertex type used in the underlying graph model
+ */
 public class FilterGenerator <V> extends TestCaseGenerator<V> {
+	
+    /**
+     * Constructs a FilterGenerator for the specified System Under Test.
+     *
+     * @param sut the SUT model containing the directed graph and constraints
+     */
     public FilterGenerator(SUT<V> sut) { 
     	super(sut); 
     }
+    
 	@Override
 	public List<List<V>> generate() {
 		List<List<V>> admissiblePaths = new ArrayList<>();
@@ -40,6 +57,17 @@ public class FilterGenerator <V> extends TestCaseGenerator<V> {
 		return admissiblePaths;
 	}
 
+	/**
+     * Builds a path for each uncovered edge in the SUT graph to achieve edge coverage.
+     *
+     * <p>Iterates over all edges in {@code sut.getGraph().edgeSet()}, constructs
+     * a path covering each uncovered edge using
+     * {@link TestCaseGenerator#buildPathCoveringEdge(Graph, DefaultEdge)},
+     * marks edges as covered via {@link #markEdges(List, Graph, Set)}, and
+     * returns the full collection of paths.</p>
+     *
+     * @return a list of vertex sequences, each covering one or more formerly uncovered edges
+     */
     public List<List<V>> egGenerate() {
 		Set<DefaultEdge> coveredEdges = new HashSet<>();
 		Graph<V, DefaultEdge> g = sut.getGraph();

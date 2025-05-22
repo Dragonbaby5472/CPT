@@ -16,9 +16,22 @@
 
 package com.example.cpb_test;
 
+/**
+ * Defines the kinds of constraints that can be applied to vertices when generating test paths.
+ *
+ * <p>Each enum constant specifies how often—or whether—a given vertex must appear in a
+ * test path:
+ * <ul>
+ *   <li>{@link #POSITIVE}   – vertex must appear in at least one test path.</li>
+ *   <li>{@link #ONCE}       – vertex must appear exactly once in a single test path.</li>
+ *   <li>{@link #NEGATIVE}   – vertex must not appear in any test path.</li>
+ *   <li>{@link #MAX_ONCE}   – vertex may appear at most once in a test path.</li>
+ * </ul>
+ * </p>
+ */
 public enum ConstraintType {
-    POSITIVE,   // 必須至少出現在某條測試路徑中
-    ONCE,       // 僅能出現一次
-    NEGATIVE,   // 不可出現
-    MAX_ONCE    // 最多出現一次
+    POSITIVE, 
+    ONCE, 
+    NEGATIVE, 
+    MAX_ONCE 
 }

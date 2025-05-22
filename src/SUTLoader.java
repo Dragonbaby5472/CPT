@@ -20,9 +20,36 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 
-
+/**
+ * Utility class for loading a System Under Test (SUT) model from a plain-text specification.
+ *
+ * <p>This loader reads the file line by line and populates a {@link SUT} instance
+ * by interpreting the following patterns:
+ * <ul>
+ *   <li><code>END:[&lt;empty&gt;]</code> or <code>START:[v1,v2,...]</code> – designates the start vertex and, if successors list is empty, also marks it as an end vertex; otherwise edges to listed vertices are added.</li>
+ *   <li><code>&lt;vertex&gt;:[v1,v2,...]</code> – adds directed edges from <code>vertex</code> to each successor.</li>
+ *   <li><code>Constraint[from - to - TYPE]</code> – registers a constraint between two vertices of the specified {@link ConstraintType}.</li>
+ * </ul>
+ * Blank or unrecognized lines are skipped.</p>
+ */
 public class SUTLoader {
 
+	/**
+     * Parses the given text file and returns a {@code SUT<String>} populated
+     * with vertices, edges, start/end markers, and vertex-pair constraints.
+     *
+     * <p>Supported line formats:
+     * <ul>
+     *   <li><code>START:[…]</code> – set start vertex, optionally mark ends or add edges.</li>
+     *   <li><code>Vertex:[…]</code> – define outgoing edges.</li>
+     *   <li><code>Constraint[…]</code> – add a constraint of type POSITIVE, ONCE, NEGATIVE, or MAX_ONCE.</li>
+     * </ul>
+     * </p>
+     *
+     * @param filePath path to the text file describing the SUT model
+     * @return a {@code SUT<String>} instance constructed from the file contents
+     * @throws IOException if reading from the file fails
+     */
 	public static SUT<String> loadFromTxt(String filePath) throws IOException {
 	    SUT<String> sut = new SUT<>();
 	    try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {

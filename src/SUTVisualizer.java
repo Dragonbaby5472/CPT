@@ -27,20 +27,40 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 
- //將 SUT 物件匯出為 DOT 檔，並呼叫 GraphViz 產生圖像
+/**
+ * Provides utilities to export a System Under Test (SUT) graph to DOT format
+ * and render it as a PNG image using GraphViz.
+ *
+ * <p>This class customizes vertex identifiers, labels, and styles based on the SUT’s
+ * start vertex and defined constraints, then writes a DOT file and can invoke
+ * the GraphViz ‘dot’ tool to produce a PNG visualization.</p>
+ *
+ * @param <V> the vertex type used in the SUT graph
+ */
 public class SUTVisualizer<V> {
 
+	/**
+     * Exports the given SUT graph to a DOT file compatible with GraphViz.
+     *
+     * <p>Vertex IDs are sanitized to valid DOT identifiers. The start vertex is
+     * highlighted with a filled style and specific fill color. Vertices involved
+     * in constraints receive color and line‐style attributes according to their types.</p>
+     *
+     * @param sut     the System Under Test model containing the graph and constraints
+     * @param dotFile the path to the output DOT file
+     * @throws IOException if an I/O error occurs during file writing
+     */
     public void exportDot(SUT<V> sut, String dotFile) throws IOException {
         Graph<V, DefaultEdge> g = sut.getGraph();
         DOTExporter<V, DefaultEdge> exporter = new DOTExporter<>(
-            v -> v.toString().replaceAll("\\W+", "_")); // 頂點 ID
-        // 設定頂點標籤
+            v -> v.toString().replaceAll("\\W+", "_"));
+        // Provide default vertex label
         exporter.setVertexAttributeProvider(v -> {
             Map<String, Attribute> m = new LinkedHashMap<>();
             m.put("label", DefaultAttribute.createAttribute(v.toString()));
             return m;
         });
-        // 匯出點的 provider
+        // Provide styled attributes for start vertex and constrained vertices
         exporter.setVertexAttributeProvider(v -> {
         	Map<String, Attribute> m = new LinkedHashMap<>();
         	m.put("label", DefaultAttribute.createAttribute(v.toString()));
@@ -93,7 +113,15 @@ public class SUTVisualizer<V> {
         }
     }
 
-
+    /**
+     * Renders a DOT file to a PNG image by invoking the GraphViz ‘dot’ command.
+     *
+     * @param dotFile the input DOT file path
+     * @param pngFile the output PNG file path
+     * @throws IOException          if an I/O error occurs while executing the process
+     * @throws InterruptedException if the rendering process is interrupted
+     * @throws RuntimeException     if GraphViz returns a non-zero exit code
+     */
     public void renderToPng(String dotFile, String pngFile)
             throws IOException, InterruptedException {
         ProcessBuilder pb = new ProcessBuilder(

@@ -22,7 +22,23 @@ import java.util.List;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
 
+/**
+ * Implements the Constrained Path-based Testing Composition (CPC) algorithm
+ * for generating test paths over the given System Under Test (SUT) graph.
+ *
+ * <p>This generator first covers all POSITIVE and ONCE constraints by finding
+ * admissible paths, then completes edge coverage for the remaining edges,
+ * always ensuring that no NEGATIVE or repeated constraints are violated.</p>
+ *
+ * @param <V> the vertex type used in the SUT graph model
+ */
 public class CPCGenerator<V> extends TestCaseGenerator<V> {
+	
+	/**
+     * Constructs a new CPCGenerator for the specified SUT model.
+     *
+     * @param sut the System Under Test model containing the graph and constraints
+     */
     public CPCGenerator(SUT<V> sut) { super(sut); }
 
     @Override
@@ -35,7 +51,7 @@ public class CPCGenerator<V> extends TestCaseGenerator<V> {
         Set<Constraint<V>> coveredConstraints = new HashSet<>();
         Set<DefaultEdge> coveredEdges = new HashSet<>();
 
-        // 1. 處理 POSITIVE / ONCE：找到 admissible 路徑並加入兩組列表
+        // Phase 1: cover POSITIVE and ONCE constraints
         for (Constraint<V> c : C) {
             if (c.getType() == ConstraintType.POSITIVE ||
                 c.getType() == ConstraintType.ONCE) {
@@ -51,10 +67,9 @@ public class CPCGenerator<V> extends TestCaseGenerator<V> {
             }
         }
  
-        // 2. 補齊邊覆蓋：對每條尚未覆蓋的邊，找最短路徑並確認其是否符合約束
+        // Phase 2: complete edge coverage
         for (DefaultEdge e : g.edgeSet()) {
             if (!coveredEdges.contains(e)) {
-                //V u = g.getEdgeSource(e), v = g.getEdgeTarget(e);
                 List<V> path = buildPathCoveringEdge(g, e);
                 if (path != null && !coveragePaths.contains(path)) {
                     if (isAdmissible(path, C, coveredConstraints)) {
@@ -69,9 +84,24 @@ public class CPCGenerator<V> extends TestCaseGenerator<V> {
         return admissiblePaths;
     }
 
-
+    /**
+     * Maximum number of times a single edge may be reused when searching for
+     * an admissible path.
+     */
     private static final int VISITSLIMIT = 2;
 
+    /**
+     * Performs a breadth-first search to find a path from the SUT start vertex
+     * that satisfies the given target constraint without violating any negative
+     *  constraints. It gradually increases the allowed reuse limit for edges.
+     *
+     * @param g               the directed graph model of the SUT
+     * @param target          the constraint to be satisfied by the returned path
+     * @param covered         the set of constraints already covered by previous paths
+     * @param allConstraints  the full list of constraints defined on the SUT
+     * @return a list of vertices forming an admissible path that satisfies {@code target},
+     *         or {@code null} if no such path exists within the visit limit
+     */
     private List<V> findAdmissiblePath(Graph<V, DefaultEdge> g,
                                        Constraint<V> target,
                                        Set<Constraint<V>> covered,
@@ -79,7 +109,6 @@ public class CPCGenerator<V> extends TestCaseGenerator<V> {
         V start = sut.getStartVertex();
         Set<V> ends = sut.getEndVertices();
         
-        // 依次嘗試每種邊重用上限 i = 1..VISITSLIMIT
         for (int limit = 1; limit <= VISITSLIMIT; limit++) {
             Queue<List<V>> queue = new ArrayDeque<>();
             
@@ -116,7 +145,14 @@ public class CPCGenerator<V> extends TestCaseGenerator<V> {
         return null;
     }
 
-    /** 計算 edge e 在 path 中的出現次數 */
+    /**
+     * Counts how many times the specified edge appears consecutively in the given path.
+     *
+     * @param path the sequence of vertices representing a candidate test path
+     * @param e    the graph edge whose occurrences are to be counted
+     * @param g    the directed graph model to resolve edge endpoints
+     * @return the number of occurrences of {@code e} in {@code path}
+     */
     private int countEdgeOccurrences(List<V> path,
                                      DefaultEdge e,
                                      Graph<V, DefaultEdge> g) {

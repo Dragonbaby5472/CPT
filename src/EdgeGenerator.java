@@ -19,8 +19,25 @@ import java.util.*;
 
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
+
+/**
+ * A concrete TestCaseGenerator that produces test paths achieving
+ * edge coverage on the SUT graph.
+ *
+ * <p>This generator visits each edge in the directed graph exactly once.
+ * For every uncovered edge, it builds a path that traverses that edge
+ * by calling {@link #buildPathCoveringEdge(Graph, DefaultEdge)} and
+ * then marks the edge as covered.</p>
+ *
+ * @param <V> the vertex type used in the SUT graph
+ */
 public class EdgeGenerator <V> extends TestCaseGenerator<V>{
 	
+	/**
+     * Constructs an EdgeGenerator for the given System Under Test.
+     *
+     * @param sut the SUT model containing the directed graph and constraints
+     */
     public EdgeGenerator(SUT<V> sut) { super(sut); }
     
 	@Override

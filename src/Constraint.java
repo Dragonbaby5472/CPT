@@ -16,6 +16,17 @@
 
 package com.example.cpb_test;
 
+/**
+ * Represents a directed constraint between two vertices in a graph, parameterized by a constraint type.
+ *
+ * <p>This immutable class encapsulates a source vertex, a target vertex, and a {@code ConstraintType}
+ * that defines the nature of the relationship between them. It provides accessor methods to retrieve
+ * each component and a {@code toString()} implementation that formats the constraint as
+ * {@code [from → to : type]}.</p>
+ *
+ * @param <V> the vertex type used in this constraint
+ */
+
 public class Constraint<V> {
     private final V from;          
     private final V to;            

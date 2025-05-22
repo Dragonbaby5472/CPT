@@ -19,6 +19,14 @@ package com.example.cpb_test;
 import java.io.*;
 import java.util.*;
 
+/**
+ * Entry point for the Constrained Path-Based Testing application.
+ *
+ * <p>This class handles command-line argument parsing, logging and CSV setup,
+ * loading of System Under Test (SUT) models from a single file or directory,
+ * dispatching to CPC, Filter, and Edge test case generators, and optional
+ * graph visualization. It also collects and prints test metrics.</p>
+ */
 public class Main {
 	
 	private static boolean showPath = false;
@@ -26,6 +34,18 @@ public class Main {
 	private static String csvPath = "./result.csv";
 	private static PrintWriter pw;
 	
+	/**
+     * Parses command-line arguments, configures logging, CSV output, and visualization,
+     * then drives test generation for one or more SUT models.
+     *
+     * @param args array of command-line options:
+     *             -file &lt;path&gt; or -dir &lt;path&gt; to specify input,
+     *             -log &lt;file&gt; to enable logging,
+     *             -csv &lt;file&gt; to enable CSV output,
+     *             -todot &lt;file&gt; / -topng &lt;file&gt; for graph export.
+     * @throws InterruptedException if graph rendering sleep is interrupted
+     * @throws IOException if reading or writing any file fails
+     */
 	@SuppressWarnings("resource")
 	private static void run(String[] args)throws InterruptedException, IOException {
 		boolean isFile = true;
@@ -36,6 +56,8 @@ public class Main {
 		String logFile = "./result.log";
 		String dotFile = "./temp.dot";
 		String pngFile = "./sut.png";
+		
+		//args instructions
 		for(int i = 0; i < args.length; i++) {
 			if(args[i].equals("-file")) {
 				isFile = true;
@@ -66,6 +88,8 @@ public class Main {
 				csvPath = args[++i];
 			}
 		}
+		
+		//write system.out to both console and logfile if necessary
 		FileOutputStream fos = new FileOutputStream(logFile);
 		MultiOutputStream mos = new MultiOutputStream(System.out, fos);
 		PrintStream ps = new PrintStream(mos, true);
@@ -171,6 +195,15 @@ public class Main {
             if(saveCSV) pw.println();
 		}
 	}
+	
+	/**
+     * Generates and evaluates a  SUT using the specified TestCaseGenerator. 
+     * Measures execution time, optionally
+     * prints each path, and outputs coverage metrics.
+     *
+     * @param sut      the System Under Test model to be tested
+     * @param testcase the TestCaseGenerator instance (e.g., CPCGenerator, FilterGenerator, EdgeGenerator)
+     */
 	private static void singleTest(SUT<String> sut, TestCaseGenerator<String> testcase) {
 		double t0 = System.nanoTime();
         List<List<String>> tests = testcase.generate();
@@ -210,6 +243,16 @@ public class Main {
         System.out.println();
 	}
 	
+    /**
+     * Executes test case generation for multiple SUT instances in batch mode.
+     * Iterates through the provided SUT models and corresponding generators,
+     * aggregates metrics across all runs, optionally prints details and writes CSV.
+     *
+     * @param suts      list of SUT models to process
+     * @param testcases list of TestCaseGenerator instances matching each SUT
+     * @param sutNames  list of identifiers or filenames for each SUT
+     * @throws IOException if writing to the CSV output fails
+     */
 	private static void multiTest(List<SUT<String>> suts,
 								List<TestCaseGenerator<String>> testcases,
 								List<String> sutName) throws IOException {
@@ -291,7 +334,13 @@ public class Main {
         System.out.println();
 	}
 	
-	//main
+    /**
+     * Main application entry point.
+     *
+     * @param args command-line arguments passed to the program
+     * @throws InterruptedException if run() is interrupted during execution
+     * @throws IOException if an I/O error occurs in run()
+     */
 	public static void main(String[] args) throws InterruptedException, IOException {
 		run(args);
 	}

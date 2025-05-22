@@ -19,10 +19,49 @@ package com.example.cpb_test;
 import java.util.*;
 import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
+
+/**
+ * Provides a generic framework for generating test cases (test paths) over a directed graph model 
+ * of a System Under Test (SUT).
+ *
+ * <p>This abstract base class holds a reference to the {@code SUT} and defines the contract for
+ * {@link #generate()}, which must produce a collection of test paths that collectively achieve
+ * edge coverage while respecting any defined constraints. Subclasses implement {@code generate()}
+ * and may leverage the supplied utility methods to:
+ * <ul>
+ *   <li>Check whether a path contains or repeats a given constraint.</li>
+ *   <li>Determine if a candidate path is admissible under the current set of covered constraints.</li>
+ *   <li>Mark edges and constraints covered by a path.</li>
+ *   <li>Build or discover paths covering a specific edge, both forwards and backwards from that edge.</li>
+ * </ul>
+ *
+ * @param <V> the vertex type used in the underlying graph model
+ */
 public abstract class TestCaseGenerator<V> {
     protected final SUT<V> sut;
+    
+    /**
+     * Constructs a TestCaseGenerator for the given System Under Test.
+     *
+     * @param sut the SUT model against which test paths will be generated
+     */
     public TestCaseGenerator(SUT<V> sut) { this.sut = sut; }
+    
+    /**
+     * Generates a collection of test paths satisfying the defined constraints.
+     *
+     * @return a list of test paths, each represented as an ordered list of vertices
+     */
     public abstract List<List<V>> generate();
+    
+    /**
+     * Determines whether the specified constraint appears in the given path.
+     * A constraint is satisfied if its 'from' vertex precedes its 'to' vertex at least once.
+     *
+     * @param path the sequence of vertices forming a candidate test path
+     * @param c    the constraint pairing two vertices (from → to)
+     * @return true if the path contains the constraint, false otherwise
+     */
     protected boolean containsConstraint(List<V> path, Constraint<V> c) {
     	boolean from = false, to = false;
         for (int i = 0; i < path.size(); i++) {
@@ -31,6 +70,15 @@ public abstract class TestCaseGenerator<V> {
         }
         return from && to;
     }
+    
+    /**
+     * Checks whether the given constraint appears more than once in the path.
+     * Both the 'from' and 'to' vertices must each occur at least twice, in order.
+     *
+     * @param path the sequence of vertices forming a candidate test path
+     * @param c    the constraint pairing two vertices (from → to)
+     * @return true if the constraint appears repeatedly, false otherwise
+     */
     protected boolean containsConstraintRepeatedly(List<V> path, Constraint<V> c) {
     	int from = 0, to = 0;
         for (int i = 0; i < path.size(); i++) {
@@ -39,7 +87,15 @@ public abstract class TestCaseGenerator<V> {
         }
         return from > 1 && to > 1;
     }
-    // 驗證 path 是否不違反任何 constraint，並考慮已 covered 的正向約束
+    
+    /**
+     * Verifies that the candidate path does not violate any constraint in C,
+     *
+     * @param path    the sequence of vertices forming a candidate test path
+     * @param C       the full list of constraints for the SUT
+     * @param covered the set of constraints already covered by previous paths
+     * @return true if the path is admissible, false if it violates any rule
+     */
     protected boolean isAdmissible(List<V> path,
                                  List<Constraint<V>> C,
                                  Set<Constraint<V>> covered) {
@@ -59,6 +115,15 @@ public abstract class TestCaseGenerator<V> {
     	return true;
         
     }
+    
+    /**
+     * Marks all constraints from C that are covered by the given path,
+     * adding them to the coveredConstraints set.
+     *
+     * @param path               the sequence of vertices forming a test path
+     * @param C                  the full list of constraints for the SUT
+     * @param coveredConstraints the set to which newly covered constraints will be added
+     */
     protected void markConstraints(List<V> path,
                                  List<Constraint<V>> C,
                                  Set<Constraint<V>> coveredConstraints) {
@@ -68,6 +133,14 @@ public abstract class TestCaseGenerator<V> {
             }
         }
     }
+    
+    /**
+     * Adds all edges traversed in the given path to the coveredEdges set.
+     *
+     * @param path         the sequence of vertices forming a test path
+     * @param g            the graph model of the SUT
+     * @param coveredEdges the set to which covered edges will be added
+     */
     protected void markEdges(List<V> path,
                            Graph<V, DefaultEdge> g,
                            Set<DefaultEdge> coveredEdges) {
@@ -80,6 +153,15 @@ public abstract class TestCaseGenerator<V> {
             }
         }
     }
+    
+    /**
+     * Builds a complete path that covers the specified edge by concatenating
+     * a path leading to its source and a path from its target.
+     *
+     * @param g   the graph model of the SUT
+     * @param eIn the edge to be covered by the resulting path
+     * @return a list of vertices forming the combined path, or null if invalid
+     */
     protected List<V> buildPathCoveringEdge(Graph<V, DefaultEdge> g,
                                           DefaultEdge eIn) {
     	
@@ -102,9 +184,13 @@ public abstract class TestCaseGenerator<V> {
         return path;
     }
 
-    /**  
-     * Algorithm 8 (Path_From_Source) 的優化實作：  
-     * 往前遍歷所有 incoming 邊，直到到達 startVertex  
+    /**
+     * Finds a shortest path from the SUT start vertex to the source of the given edge
+     * using a breadth‐first search over incoming edges.
+     *
+     * @param e the edge whose source vertex must be reached
+     * @param g the graph model of the SUT
+     * @return a list of vertices from start to the edge source, or null if no path exists
      */
     protected List<V> findPathsToEdge(DefaultEdge e,
                                           Graph<V, DefaultEdge> g) {
@@ -149,11 +235,14 @@ public abstract class TestCaseGenerator<V> {
         return null;
     }
 
-    /**  
-     * Algorithm 9 (Path_To_End) 的優化實作：  
-     * 往後遍歷所有 outgoing 邊，直到到達某一 endVertex  
+    /**
+     * Finds a shortest path from the target of the given edge to any end vertex
+     * using a breadth‐first search over outgoing edges.
+     *
+     * @param e the edge whose target vertex is the path start
+     * @param g the graph model of the SUT
+     * @return a list of vertices from the edge target to an end vertex, or null if none exists
      */
-	
     protected List<V> findPathsFromEdge(DefaultEdge e,
                                           Graph<V, DefaultEdge> g) {
         Set<V> ends = sut.getEndVertices();
@@ -195,7 +284,15 @@ public abstract class TestCaseGenerator<V> {
         }
         return null;
     }
-    /** 計算 edge e 在 path 中的出現次數 */
+    
+    /**
+     * Checks whether the specified edge appears in the given path.
+     *
+     * @param path the sequence of vertices forming a test path
+     * @param e    the graph edge to look for
+     * @param g    the graph model of the SUT
+     * @return true if the edge is present in the path, false otherwise
+     */
     protected boolean containEdge(List<V> path,
                                      DefaultEdge e,
                                      Graph<V, DefaultEdge> g) {
