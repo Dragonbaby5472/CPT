@@ -45,14 +45,15 @@ public class Main {
      *             -todot &lt;file&gt; / -topng &lt;file&gt; for graph export.
      * @throws InterruptedException if graph rendering sleep is interrupted
      * @throws IOException if reading or writing any file fails
+	 * @throws FileLoadException 
      */
 	@SuppressWarnings("resource")
-	private static void run(String[] args)throws InterruptedException, IOException {
+	private static void run(String[] args)throws InterruptedException, IOException, FileLoadException {
 		boolean isFile = true;
 		boolean createLog = false;
 		boolean createDot = false;
 		boolean createPng = false;
-		String filePath = "./msa_example.txt";
+		String filePath = null;
 		String logFile = "./result.log";
 		String dotFile = "./temp.dot";
 		String pngFile = "./sut.png";
@@ -88,6 +89,10 @@ public class Main {
 				csvPath = args[++i];
 			}
 		}
+		if(filePath == null) {
+			System.out.println("No file specifed, using default SUT.");
+			System.out.println();
+		}
 		
 		//write system.out to both console and logfile if necessary
 		FileOutputStream fos = new FileOutputStream(logFile);
@@ -102,7 +107,67 @@ public class Main {
 		}
 
 		if(isFile){
-			SUT<String> sut = SUTLoader.loadFromTxt(filePath);
+			SUT<String> sut = null;
+			if(filePath == null) {
+				sut = new SUT<>();
+				sut.setStartVertex("START");
+		        sut.addEndVertex("report service");
+				String[] vertices = {
+			            "START",
+			            "order service",
+			            "user service",
+			            "notification service",
+			            "product service",
+			            "payment service",
+			            "inventory service",
+			            "analytics service",
+			            "auth service",
+			            "shipping service",
+			            "report service"
+			        };
+		        for (String v : vertices) {
+		            sut.addVertex(v);
+		        }
+		        sut.addEdge("START",               "order service");
+		        sut.addEdge("order service",       "user service");
+		        sut.addEdge("order service",       "notification service");
+		        sut.addEdge("order service",       "product service");
+		        sut.addEdge("order service",       "payment service");
+		        sut.addEdge("user service",        "auth service");
+		        sut.addEdge("user service",        "analytics service");
+		        sut.addEdge("notification service","user service");
+		        sut.addEdge("product service",     "inventory service");
+		        sut.addEdge("product service",     "report service");
+		        sut.addEdge("payment service",     "notification service");
+		        sut.addEdge("inventory service",   "order service");
+		        sut.addEdge("inventory service",   "shipping service");
+		        sut.addEdge("analytics service",   "report service");
+		        sut.addEdge("auth service",        "user service");
+		        sut.addEdge("shipping service",    "notification service");
+		        sut.addEdge("shipping service",    "report service");
+		        sut.addConstraint(new Constraint<>(
+		                "order service", "product service", ConstraintType.MAX_ONCE));
+		        sut.addConstraint(new Constraint<>(
+		                "order service", "auth service", ConstraintType.ONCE));
+		        sut.addConstraint(new Constraint<>(
+		                "notification service", "report service", ConstraintType.POSITIVE));
+		        sut.addConstraint(new Constraint<>(
+		                "shipping service", "auth service", ConstraintType.NEGATIVE));
+			}
+			else {
+				try{
+					sut = SUTLoader.loadFromTxt(filePath);
+				}catch(FileLoadException f) {
+					System.err.println(f.getMessage());
+					System.err.println("The program has been suspended due to the above error.");
+					System.exit(1);
+				}catch(ParseFormatException p) {
+					System.err.println(p.getMessage());
+					System.err.println("The program has been suspended due to the above error.");
+					System.exit(2);
+				}
+			}
+			
 			System.out.println("===== SUT Info =====");
             System.out.println(sut);
             System.out.println();
@@ -126,6 +191,18 @@ public class Main {
 		}
 		else {
 			File dir = new File(filePath);
+			try {
+				if (!dir.exists()) {
+					throw new FileLoadException(String.format("Directory %s does not exist.", filePath));
+				}
+				if (!dir.isDirectory()) {
+					throw new FileLoadException(String.format("Provided path %s is not a directory.", filePath));
+				}
+			}catch(FileLoadException e) {
+				System.err.println(e.getMessage());
+				System.err.println("The program has been suspended due to the above error.");
+				System.exit(2);
+			}
 			String[] files = dir.list(new FilenameFilter() {
 	            @Override
 	            public boolean accept(File d, String name) {
@@ -145,7 +222,18 @@ public class Main {
 	        for (String fname : files) {
 	            String path = filePath + File.separator + fname;
 	            sutName.add(fname);
-	            SUT<String> sut = SUTLoader.loadFromTxt(path);
+	            SUT<String> sut = null;
+	            try{
+					sut = SUTLoader.loadFromTxt(path);
+				}catch(FileLoadException f) {
+					System.err.println(f.getMessage());
+					System.err.println("Excluded file due to above error(s).");
+					continue;
+				}catch(ParseFormatException p) {
+					System.err.println(p.getMessage());
+					System.err.println("Excluded file due to above error(s).");
+					continue;
+				}
 	            sutList.add(sut);
 	            cpcGen.add(new CPCGenerator<>(sut));
 	            filterGen.add(new FilterGenerator<>(sut));
@@ -340,8 +428,9 @@ public class Main {
      * @param args command-line arguments passed to the program
      * @throws InterruptedException if run() is interrupted during execution
      * @throws IOException if an I/O error occurs in run()
+     * @throws FileLoadException 
      */
-	public static void main(String[] args) throws InterruptedException, IOException {
+	public static void main(String[] args) throws InterruptedException, IOException, FileLoadException {
 		run(args);
 	}
 }

@@ -36,7 +36,7 @@ import org.jgrapht.graph.SimpleDirectedGraph;
 public class SUT<V> {
     private final Graph<V, DefaultEdge> graph;
     private final List<Constraint<V>> constraints;
-    private V startVertex;
+    private V startVertex = null;
     private final Set<V> endVertices;
 
     /**
