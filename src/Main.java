@@ -157,6 +157,7 @@ public class Main {
 			else {
 				try{
 					sut = SUTLoader.loadFromTxt(filePath);
+					constraintValid(filePath, sut);
 				}catch(FileLoadException f) {
 					System.err.println(f.getMessage());
 					System.err.println("The program has been suspended due to the above error.");
@@ -225,13 +226,14 @@ public class Main {
 	            SUT<String> sut = null;
 	            try{
 					sut = SUTLoader.loadFromTxt(path);
+					constraintValid(fname, sut);
 				}catch(FileLoadException f) {
 					System.err.println(f.getMessage());
-					System.err.println("Excluded file due to above error(s).");
+					System.err.println("Skip this file due to above error(s).");
 					continue;
 				}catch(ParseFormatException p) {
 					System.err.println(p.getMessage());
-					System.err.println("Excluded file due to above error(s).");
+					System.err.println("Skip this file due to above error(s).");
 					continue;
 				}
 	            sutList.add(sut);
@@ -285,7 +287,7 @@ public class Main {
 	}
 	
 	/**
-     * Generates and evaluates a  SUT using the specified TestCaseGenerator. 
+     * Generates and evaluates a SUT using the specified TestCaseGenerator. 
      * Measures execution time, optionally
      * prints each path, and outputs coverage metrics.
      *
@@ -420,6 +422,36 @@ public class Main {
         System.out.println("Avg edge_cov(T) = " + avgcov / testcases.size());
         System.out.println("Avg t[ms] = " + avgTime / testcases.size());
         System.out.println();
+	}
+	
+	/**
+	 * Validates that each constraint in the given SUT refers only to existing vertices.
+	 *
+	 * <p>Iterates through all {@link Constraint} objects in the SUT and ensures that
+	 * both the source ("from") and target ("to") vertices are present in the SUT's graph.
+	 * If any referenced vertex is missing, a {@link ParseFormatException} is thrown
+	 * with a detailed message including the input file path and the invalid constraint.</p>
+	 *
+	 * @param <V>  the vertex type used in the SUT model
+	 * @param file the path of the input file (used for error reporting)
+	 * @param sut  the System Under Test model whose constraints are to be validated
+	 * @throws ParseFormatException if the graph does not contain a vertex referenced by any constraint
+	 */
+	private static <V> void constraintValid(String file, SUT<V> sut) throws ParseFormatException {
+		for(Constraint<V> c : sut.getConstraints()) {
+			if(!sut.getGraph().containsVertex(c.getFrom())) {
+				throw new ParseFormatException(
+					String.format("Error occurred at file %s%s"
+						+ "Invalid constraint %s: SUT doesn't contain vertex %s", file, System.lineSeparator(), c, c.getFrom())
+				);
+			}
+			if(!sut.getGraph().containsVertex(c.getTo())) {
+				throw new ParseFormatException(
+					String.format("Error occurred at file %s%s"
+						+ "Invalid constraint %s: SUT doesn't contain vertex %s", file, System.lineSeparator(), c, c.getTo())
+					);
+			}
+		}
 	}
 	
     /**

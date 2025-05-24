@@ -21,6 +21,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.*;
 
+import org.jgrapht.GraphTests;
+
 /**
  * Utility class for loading a System Under Test (SUT) model from a plain-text specification.
  *
@@ -61,8 +63,9 @@ public class SUTLoader {
 	    try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
 	        String line;
 	        int lineNum = 0;
+	        int vtxNum = 0;
 	        while ((line = reader.readLine()) != null) {
-	        		lineNum++;
+	        		lineNum ++;
 	            line = line.trim();
 	            if (line.isEmpty() || line.startsWith("#")) {
 	                continue;
@@ -100,6 +103,7 @@ public class SUTLoader {
 		            }
 		            continue;
 	            }
+	            vtxNum ++;
 	            if (!line.contains(":")) {
 	                throw new ParseFormatException(
 	                    String.format("Error occurred at file %s%s"
@@ -118,14 +122,16 @@ public class SUTLoader {
 	            }
 	            
 	            String from = parts[0].trim();
-
+	            if (from.isEmpty()) {
+	                throw new ParseFormatException(
+	                    String.format("Error occurred at file %s%s"
+        	            		+ "Line %d: Cannot find source point before ':' : %s"
+	                    		, filePath, System.lineSeparator(), lineNum, line)
+	                );
+	            }
 	            if (from.equals("START") || from.equals("Start")) {
 	                sut.setStartVertex(from);
 	            }
-	            if (parts[1].trim().equals("[]")) {
-	                sut.addEndVertex(from);
-	            }
-
 	            sut.addVertex(from);
 	            
 	            String succList = parts[1].trim();
@@ -134,42 +140,63 @@ public class SUTLoader {
 	                throw new ParseFormatException(
 	                    String.format("Error occurred at file %s%s"
         	            		+ "Line %d: Successor list must be enclosed in '[' and ']': %s"
-	                    		, filePath, System.lineSeparator(), lineNum, succList)
+	                    		, filePath, System.lineSeparator(), lineNum, line)
 	                );
 	            }
 	            String inner = succList.substring(1, succList.length() - 1).trim();
-	            if (!inner.isEmpty()) {
+	            if(inner.split(",").length == 0) 
+	            		System.err.println(String.format("Warning at file %s%s"
+        	            		+ "Line %d: Cannot get successor enclosed in '[' and ']', set as end point: %s"
+	                    		, filePath, System.lineSeparator(), lineNum, line)
+	            			);
+	            if (!inner.isEmpty() && inner.split(",").length != 0) {
 	                for (String to : inner.split(",")) {
 	                    to = to.trim();
 	                    if (to.isEmpty()) {
 	                        throw new ParseFormatException(
 	                            String.format("Error occurred at file %s%s"
-	            	            		+ "Line %d: Empty target node in list: %s",
-	            	            		filePath, System.lineSeparator(), lineNum, inner)
+	            	            		+ "Line %d: Empty target node in successor list: %s",
+	            	            		filePath, System.lineSeparator(), lineNum, line)
 	                        );
-	                    }
-	                    
-	                    if (to.startsWith("END") || to.startsWith("end")) {
-	                        sut.addEndVertex(to);
 	                    }
 	                    sut.addVertex(to);
 	                    sut.addEdge(from, to);
 	                    }
 	            }
+	            else {
+	            		sut.addEndVertex(from);
+	            }
 	            
 	        }
+	        //No start vertex
 	        if(sut.getStartVertex() == null) {
 	        		throw new ParseFormatException(
                         String.format("Error occurred at file %s%s"
         	            		+ "No start vertice named START or Start", filePath, System.lineSeparator())
                     );
 	        }
+	        //No end vertex
 	        if(sut.getEndVertices().isEmpty()) {
 	        		throw new ParseFormatException(
                         String.format("Error occurred at file %s%s"
         	            		+ "No end vertice in this SUT.", filePath, System.lineSeparator())
                     );
 	        }
+	        //Not a connected graph
+	        if(!GraphTests.isConnected(sut.getGraph())) {
+        			throw new ParseFormatException(
+                    String.format("Error occurred at file %s%s"
+    	            		+ "SUT is not a connected graph.", filePath, System.lineSeparator())
+                );	
+	        }
+	        //Get more vertices at edge target list.
+	        if(sut.getGraph().vertexSet().size() != vtxNum) {
+    				throw new ParseFormatException(
+                String.format("Error occurred at file %s%s"
+	            		+ "Missing some vertices info for this SUT.", filePath, System.lineSeparator())
+    						);	
+	        }
+	        //
 	    }catch(IOException e) {
 	    		throw new FileLoadException("Unexpected error：" + e.getMessage(), e);
 	    }
